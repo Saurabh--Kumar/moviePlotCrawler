@@ -2,6 +2,7 @@
 from bs4 import BeautifulSoup
 import requests
 import os
+import concurrent.futures
 
 
 baseUrl = "https://en.wikipedia.org"
@@ -27,7 +28,7 @@ def saveMovie(paras, movieName):
         movieDetailsText = movieDetailsText + para.get_text() + "\n"
 
     
-    saveToFile(movieDetailsText, moviesDirectory + movieName)
+    saveToFile(movieDetailsText, moviesDirectory + movieName + ".txt")
 
 
 def scrapMovieDetails(moviePageUrl: str):
@@ -59,8 +60,8 @@ def crawlYearlyMoviePage(yearlyMoviesPageUrl: str):
     yearlyMoviePageSoup = BeautifulSoup(yearlyMoviePage.content, 'html.parser')
     movieUrlTables = yearlyMoviePageSoup.find_all(class_="wikitable")
     # each page has one table for each quarter. Each table has a list of movies released that year
-    for movieTeble in movieUrlTables:
-        crawlMoviesFromEachQuarter(movieTeble)
+    for movieTable in movieUrlTables:
+        crawlMoviesFromEachQuarter(movieTable)
 
 
 def crawl(moviesHomePageUrl: str): 
@@ -72,8 +73,12 @@ def crawl(moviesHomePageUrl: str):
 
     # find tags
     yearlyMoviesPageUrlList = homePageSoup.find(class_="mw-parser-output").find_all("li")
-    for yearlyMoviesPageUrl in yearlyMoviesPageUrlList:
-        crawlYearlyMoviePage(yearlyMoviesPageUrl)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1000) as executor:
+        # Submit file writing tasks to the thread pool
+        futures = [executor.submit(crawlYearlyMoviePage, yearlyMoviesPageUrl) for yearlyMoviesPageUrl in yearlyMoviesPageUrlList]
+
+        # Wait for all tasks to complete
+        concurrent.futures.wait(futures)
 
   
 if __name__=="__main__":
