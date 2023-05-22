@@ -5,6 +5,7 @@ import os
 import concurrent.futures
 
 
+chunkSize = 10
 baseUrl = "https://en.wikipedia.org"
 moviesDirectory = "./MoviesDetails/"
 
@@ -64,6 +65,12 @@ def crawlYearlyMoviePage(yearlyMoviesPageUrl: str):
         crawlMoviesFromEachQuarter(movieTable)
 
 
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+
 def crawl(moviesHomePageUrl: str): 
     # get URL
     moviesHomePage = requests.get(moviesHomePageUrl)
@@ -73,12 +80,14 @@ def crawl(moviesHomePageUrl: str):
 
     # find tags
     yearlyMoviesPageUrlList = homePageSoup.find(class_="mw-parser-output").find_all("li")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1000) as executor:
-        # Submit file writing tasks to the thread pool
-        futures = [executor.submit(crawlYearlyMoviePage, yearlyMoviesPageUrl) for yearlyMoviesPageUrl in yearlyMoviesPageUrlList]
+    yearlyMoviesPageUrlListChunks = chunks(yearlyMoviesPageUrlList, chunkSize)
+    for yearlyMoviesPageUrlListChunk in yearlyMoviesPageUrlListChunks:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=chunkSize) as executor:
+            # Submit file writing tasks to the thread pool
+            futures = [executor.submit(crawlYearlyMoviePage, yearlyMoviesPageUrl) for yearlyMoviesPageUrl in yearlyMoviesPageUrlListChunk]
 
-        # Wait for all tasks to complete
-        concurrent.futures.wait(futures)
+            # Wait for all tasks to complete
+            concurrent.futures.wait(futures)
 
   
 if __name__=="__main__":
