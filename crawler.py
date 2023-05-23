@@ -13,11 +13,16 @@ moviesDirectory = "./MoviesDetails/"
 # with each yearly page havinf links to movie pages of the movies releases in that year.
 moviesHomePageUrl = "https://en.wikipedia.org/wiki/Lists_of_Hindi_films"
 
+errorUrlsPattern = ['index.php']
+
 def saveToFile(movieText, movieFilePath):
+
+    if(os.path.exists(movieFilePath)):
+        print ("Movie Already Saved : " + movieFilePath)
+        return
 
     directory = os.path.dirname(movieFilePath)
     os.makedirs(directory, exist_ok=True)
-
     
     with open(movieFilePath, 'w') as f:
         f.write(movieText)
@@ -31,8 +36,17 @@ def saveMovie(paras, movieName):
     
     saveToFile(movieDetailsText, moviesDirectory + movieName + ".txt")
 
+def isValidURL(url: str):
+    for errorPattern in errorUrlsPattern:
+        if(errorPattern in url):
+            return False
+    
+    return True
 
 def scrapMovieDetails(moviePageUrl: str):
+    if(not isValidURL(moviePageUrl)):
+        return
+    
     moviePage = requests.get(moviePageUrl)
     moviePageSoup = BeautifulSoup(moviePage.content, 'html.parser')
     paras = moviePageSoup.find_all("p")
