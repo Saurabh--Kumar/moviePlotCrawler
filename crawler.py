@@ -3,7 +3,8 @@ from bs4 import BeautifulSoup
 import requests
 import os
 import concurrent.futures
-
+import re
+from urllib.parse import unquote
 
 chunkSize = 10
 baseUrl = "https://en.wikipedia.org"
@@ -14,6 +15,11 @@ moviesDirectory = "./MoviesDetails/"
 moviesHomePageUrl = "https://en.wikipedia.org/wiki/Lists_of_Hindi_films"
 
 errorUrlsPattern = ['index.php']
+
+def removeCitations(text):
+    removed =  re.sub(r'\[\d+\]', '', text)
+    return removed
+
 
 def saveToFile(movieText, movieFilePath):
 
@@ -31,10 +37,10 @@ def saveToFile(movieText, movieFilePath):
 def saveMovie(paras, movieName):
     movieDetailsText = ""
     for para in paras:
-        movieDetailsText = movieDetailsText + para.get_text() + "\n"
+        movieDetailsText = movieDetailsText + removeCitations(para.get_text()) + "\n"
 
     
-    saveToFile(movieDetailsText, moviesDirectory + movieName + ".txt")
+    saveToFile(movieDetailsText, moviesDirectory + unquote(movieName).replace('_', ' ') + ".txt")
 
 def isValidURL(url: str):
     for errorPattern in errorUrlsPattern:
@@ -79,6 +85,7 @@ def crawlYearlyMoviePage(yearlyMoviesPageUrl: str):
         crawlMoviesFromEachQuarter(movieTable)
 
 
+
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
@@ -102,6 +109,10 @@ def crawl(moviesHomePageUrl: str):
 
             # Wait for all tasks to complete
             concurrent.futures.wait(futures)
+
+        print("chunk completed: "+ str(yearlyMoviesPageUrlListChunk))
+    
+    print("Crawling completed")
 
   
 if __name__=="__main__":
